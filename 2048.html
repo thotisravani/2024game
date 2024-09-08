@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8">
+    <title>2048 Game Online</title>
+    <style>
+        body {
+            background-color: #faf8ef;
+            display: flex;
+            justify-content: center;
+            font-family: "Clear Sans", "Helvetica Neue";
+        }
+        h1 {
+            font-size: 80px;
+            line-height: 0.7;
+            color: #ffff;
+            margin: 0px;
+        }
+        
+        .container {
+            width: 500px;
+            margin-top: 10px;
+            padding:20px;
+            gap:30px;
+            box-shadow: 3px 3px 20px white;
+        }
+        
+        .info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            width: 456px;
+            height: 456px;
+            background-color: #0e0d0d;
+            border: 7px solid #BBADA0;
+            border-radius: 6px;
+            margin-top: 20px;
+            box-shadow: 3px 3px 20px white;
+            border: 3px solid whitesmoke;
+        }
+        
+        .grid div {
+            width: 100px;
+            height: 100px;
+            margin: 7px;
+            border-radius: 3px;
+            background-color: #f8f7f5;
+            color: #afa192;
+            font-weight: bold;
+            text-align: center;
+            font-size: 60px;
+            line-height: 1.6;
+        }
+        
+        .score-container, .best-score-container {
+            text-align: center;
+            width: 80px;
+            height: 60px;
+            border-radius: 3px;
+            background-color: #3a46f5;
+            color: #FFFFFF;
+            margin-right: 20px;
+            box-shadow: 3px 3px 20px white;
+        }
+        
+        #score {
+            font-size: 30px;
+        }
+        
+        .score-title, .best-score-title {
+            font-size: 20px;
+        }
+        
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+    
+        }
+        
+        .button {
+            background-color: #86ee0e;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 3px;
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+            margin-left: 10px;
+            box-shadow: 3px 3px 20px white;
+            border: 3px solid whitesmoke;
+        }
+        
+        .hint {
+            background-color: #ffb74d;
+            border: 3px solid whitesmoke;
+        }
+        
+        #hint {
+            display: none;
+            background-color: #f2b179;
+            border: 1px solid #e5a65a;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        #background-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1; 
+        }
+        #result{
+            font-size: 20px;
+            color: #f8f7f5;
+        }
+        #score-increment {
+            position: absolute;
+            border-radius: 5px;
+            padding: 5px;
+            font-weight: bold;
+            z-index: 1000; 
+        }
+        #score-message {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 5px;
+            padding: 10px;
+            font-size: 24px;
+            color: #333;
+            display: none;
+        }
+        .last{
+            display: flex;
+            margin: 20px;
+            gap:5cm;
+        }
+        .button-container{
+            display: flex;
+            gap:20px;
+            font-size: 10px;
+            margin-bottom: 0px;
+        }
+    </style>
+</head>
+<body>
+    <video id="background-video" autoplay muted loop>
+        <source src="video9.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>    
+    <div class="container">
+        <div class="info">
+            <h1>2048</h1>
+            <div class="score-container">
+                <div class="score-title">Score</div>
+                <span id="score">0</span>
+                <div id="score-increment" style="font-size: 24px; color: #333; position: absolute; display: none;"></div>
+                <div id="score-message" style="font-size: 24px; color: #333; position: absolute; display: none;"></div>
+            </div>
+            <div class="best-score-container">
+                <div class="best-score-title">Best</div>
+                <span id="best-score">0</span>
+            </div>
+        </div>
+        <div class="button-container">
+            <div id="result">Join the numbers and get to the <b>2048</b> tile!</div>
+            <button class="button" id="new-game">New Game</button>  
+        </div>
+        <div class="grid"></div>
+        <div class="last">
+            <button class="button hint" id="show-hint">How to play</button>
+            <button class="button hint">settings</button>
+        </div>
+        <div id="hint">Use arrow keys to move the tiles. When two tiles having the same number touch, they join into one!</div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+    const gridDisplay = document.querySelector('.grid')
+    const scoreDisplay = document.getElementById('score')
+    const bestScoreDisplay = document.getElementById('best-score')
+    const resultDisplay = document.getElementById('result')
+    const hintDisplay = document.getElementById('hint')
+    const newGameButton = document.getElementById('new-game')
+    const showHintButton = document.getElementById('show-hint')
+    const incrementDisplay = document.getElementById('score-increment') 
+    const scoreMessageDisplay = document.getElementById('score-message') 
+    
+    let squares = []
+    const width = 4
+    let score = 0
+    let bestScore = localStorage.getItem('bestScore') || 0
+    scoreDisplay.innerHTML = score
+    bestScoreDisplay.innerHTML = bestScore
+
+    let incrementValue = 0; // Track increment value
+
+    function createBoard() {
+        gridDisplay.innerHTML = ''
+        squares = []
+        for (let i = 0; i < width * width; i++) {
+            let square = document.createElement('div')
+            square.innerHTML = 0
+            gridDisplay.appendChild(square)
+            squares.push(square)
+        }
+        generate()
+        generate()
+    }
+    createBoard()
+
+    function generate() {
+        let randomNumber = Math.floor(Math.random() * squares.length)
+        if (squares[randomNumber].innerHTML == 0) {
+            squares[randomNumber].innerHTML = 2
+            checkForGameOver()
+        } else generate()
+    }
+
+    function moveRight() {
+        for (let i = 0; i < 16; i++) {
+            if (i % 4 === 0) {
+                let totalOne = squares[i].innerHTML
+                let totalTwo = squares[i + 1].innerHTML
+                let totalThree = squares[i + 2].innerHTML
+                let totalFour = squares[i + 3].innerHTML
+                let row = [parseInt(totalOne), parseInt(totalTwo), parseInt(totalThree), parseInt(totalFour)]
+
+                let filteredRow = row.filter(num => num)
+                let missing = 4 - filteredRow.length
+                let zeros = Array(missing).fill(0)
+                let newRow = zeros.concat(filteredRow)
+
+                squares[i].innerHTML = newRow[0]
+                squares[i + 1].innerHTML = newRow[1]
+                squares[i + 2].innerHTML = newRow[2]
+                squares[i + 3].innerHTML = newRow[3]
+            }
+        }
+    }
+
+    function moveLeft() {
+        for (let i = 0; i < 16; i++) {
+            if (i % 4 === 0) {
+                let totalOne = squares[i].innerHTML
+                let totalTwo = squares[i + 1].innerHTML
+                let totalThree = squares[i + 2].innerHTML
+                let totalFour = squares[i + 3].innerHTML
+                let row = [parseInt(totalOne), parseInt(totalTwo), parseInt(totalThree), parseInt(totalFour)]
+
+                let filteredRow = row.filter(num => num)
+                let missing = 4 - filteredRow.length
+                let zeros = Array(missing).fill(0)
+                let newRow = filteredRow.concat(zeros)
+
+                squares[i].innerHTML = newRow[0]
+                squares[i + 1].innerHTML = newRow[1]
+                squares[i + 2].innerHTML = newRow[2]
+                squares[i + 3].innerHTML = newRow[3]
+            }
+        }
+    }
+
+    function moveUp() {
+        for (let i = 0; i < 4; i++) {
+            let totalOne = squares[i].innerHTML
+            let totalTwo = squares[i + width].innerHTML
+            let totalThree = squares[i + (width * 2)].innerHTML
+            let totalFour = squares[i + (width * 3)].innerHTML
+            let column = [parseInt(totalOne), parseInt(totalTwo), parseInt(totalThree), parseInt(totalFour)]
+
+            let filteredColumn = column.filter(num => num)
+            let missing = 4 - filteredColumn.length
+            let zeros = Array(missing).fill(0)
+            let newColumn = filteredColumn.concat(zeros)
+
+            squares[i].innerHTML = newColumn[0]
+            squares[i + width].innerHTML = newColumn[1]
+            squares[i + (width * 2)].innerHTML = newColumn[2]
+            squares[i + (width * 3)].innerHTML = newColumn[3]
+        }
+    }
+
+    function moveDown() {
+        for (let i = 0; i < 4; i++) {
+            let totalOne = squares[i].innerHTML
+            let totalTwo = squares[i + width].innerHTML
+            let totalThree = squares[i + (width * 2)].innerHTML
+            let totalFour = squares[i + (width * 3)].innerHTML
+            let column = [parseInt(totalOne), parseInt(totalTwo), parseInt(totalThree), parseInt(totalFour)]
+
+            let filteredColumn = column.filter(num => num)
+            let missing = 4 - filteredColumn.length
+            let zeros = Array(missing).fill(0)
+            let newColumn = zeros.concat(filteredColumn)
+
+            squares[i].innerHTML = newColumn[0]
+            squares[i + width].innerHTML = newColumn[1]
+            squares[i + (width * 2)].innerHTML = newColumn[2]
+            squares[i + (width * 3)].innerHTML = newColumn[3]
+        }
+    }
+
+    function combineRow() {
+        incrementValue = 0; // Reset increment value before calculation
+        for (let row = 0; row < 4; row++) {
+            let start = row * 4;
+            let end = start + 4;
+            let rowArray = squares.slice(start, end).map(square => parseInt(square.innerHTML));
+
+            for (let i = 0; i < 3; i++) {
+                if (rowArray[i] === rowArray[i + 1] && rowArray[i] !== 0) {
+                    incrementValue = rowArray[i] * 2;
+                    rowArray[i] *= 2;
+                    score += rowArray[i];
+                    rowArray[i + 1] = 0;
+                }
+            }
+
+            rowArray = rowArray.filter(num => num !== 0);
+            while (rowArray.length < 4) rowArray.push(0);
+
+            for (let i = 0; i < 4; i++) {
+                squares[start + i].innerHTML = rowArray[i];
+            }
+        }
+        scoreDisplay.innerHTML = score;
+        updateBestScore();
+        showScoreIncrement();
+        showScoreMessage();
+    }
+
+    function combineColumn() {
+        incrementValue = 0; // Reset increment value before calculation
+        for (let col = 0; col < 4; col++) {
+            let colArray = [];
+            for (let row = 0; row < 4; row++) {
+                colArray.push(parseInt(squares[col + row * width].innerHTML));
+            }
+
+            for (let i = 0; i < 3; i++) {
+                if (colArray[i] === colArray[i + 1] && colArray[i] !== 0) {
+                    incrementValue = colArray[i] * 2;
+                    colArray[i] *= 2;
+                    score += colArray[i];
+                    colArray[i + 1] = 0;
+                }
+            }
+
+            colArray = colArray.filter(num => num !== 0);
+            while (colArray.length < 4) colArray.push(0);
+
+            for (let i = 0; i < 4; i++) {
+                squares[col + i * width].innerHTML = colArray[i];
+            }
+        }
+        scoreDisplay.innerHTML = score;
+        updateBestScore();
+        showScoreIncrement();
+        showScoreMessage();
+    }
+
+    function showScoreIncrement() {
+        incrementDisplay.innerHTML = `+${incrementValue}`;
+        incrementDisplay.style.display = 'block';
+        incrementDisplay.style.opacity = 1;
+        incrementDisplay.style.transform = 'translateY(-20px)'; // Moves up slightly
+
+        setTimeout(() => {
+            incrementDisplay.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            incrementDisplay.style.opacity = 0;
+            incrementDisplay.style.transform = 'translateY(0)';
+        }, 1000);
+    }
+
+    function showScoreMessage() {
+        if (score >= 1000) {
+            scoreMessageDisplay.innerHTML = 'Awesome!';
+        } else if (score >= 5000) {
+            scoreMessageDisplay.innerHTML = 'Perfect!';
+        } else {
+            scoreMessageDisplay.innerHTML = '';
+        }
+        scoreMessageDisplay.style.display = 'block';
+        scoreMessageDisplay.style.transform='translateY(-60px)';
+
+        setTimeout(() => {
+            scoreMessageDisplay.style.display = 'none';
+            scoreMessageDisplay.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        }, 2000);
+    }
+
+    function control(e) {
+        if (e.keyCode === 37) {
+            keyLeft();
+        } else if (e.keyCode === 38) {
+            keyUp();
+        } else if (e.keyCode === 39) {
+            keyRight();
+        } else if (e.keyCode === 40) {
+            keyDown();
+        }
+    }
+    document.addEventListener('keyup', control)
+
+    function keyRight() {
+        moveRight()
+        combineRow()
+        moveRight()
+        generate()
+        addColors()
+    }
+
+    function keyLeft() {
+        moveLeft()
+        combineRow()
+        moveLeft()
+        generate()
+        addColors()
+    }
+
+    function keyDown() {
+        moveDown()
+        combineColumn()
+        moveDown()
+        generate()
+        addColors()
+    }
+
+    function keyUp() {
+        moveUp()
+        combineColumn()
+        moveUp()
+        generate()
+        addColors()
+    }
+
+    function updateBestScore() {
+        if (score > bestScore) {
+            bestScore = score
+            localStorage.setItem('bestScore', bestScore)
+            bestScoreDisplay.innerHTML = bestScore
+        }
+    }
+
+    function checkForGameOver() {
+        let zeros = squares.some(square => square.innerHTML == 0)
+        let noMove = !canMove()
+        if (noMove && !zeros) {
+            resultDisplay.innerHTML = 'Game Over'
+            document.removeEventListener('keyup', control)
+            setTimeout(() => clear(), 3000)
+        }
+    }
+
+    function canMove() {
+        // Check if there are any moves left
+        for (let i = 0; i < 16; i++) {
+            if (squares[i].innerHTML === '0') return true
+            if (i % 4 < 3 && squares[i].innerHTML === squares[i + 1].innerHTML) return true
+            if (i < 12 && squares[i].innerHTML === squares[i + width].innerHTML) return true
+        }
+        return false
+    }
+
+    newGameButton.addEventListener('click', () => {
+        score = 0
+        scoreDisplay.innerHTML = score
+        resultDisplay.innerHTML = 'Join the numbers and get to the <b>2048</b> tile!'
+        createBoard()
+        addColors()
+        scoreMessageDisplay.style.display = 'none'
+    })
+
+    showHintButton.addEventListener('click', () => {
+        hintDisplay.style.display = hintDisplay.style.display === 'none' ? 'block' : 'none'
+    })
+
+    function addColors() {
+        for (let i = 0; i < squares.length; i++) {
+            if (squares[i].innerHTML == 0) squares[i].style.backgroundColor = '#afa192'
+            else if (squares[i].innerHTML == 2) squares[i].style.backgroundColor = 'lightpink'
+            else if (squares[i].innerHTML == 4) squares[i].style.backgroundColor = 'lightblue'
+            else if (squares[i].innerHTML == 8) squares[i].style.backgroundColor = 'orange'
+            else if (squares[i].innerHTML == 16) squares[i].style.backgroundColor = 'yellow'
+            else if (squares[i].innerHTML == 32) squares[i].style.backgroundColor = 'lightgreen'
+            else if (squares[i].innerHTML == 64) squares[i].style.backgroundColor = 'purple'
+            else if (squares[i].innerHTML == 128) squares[i].style.backgroundColor = 'aqua'
+            else if (squares[i].innerHTML == 256) squares[i].style.backgroundColor = 'royalblue'
+            else if (squares[i].innerHTML == 512) squares[i].style.backgroundColor = 'pink'
+            else if (squares[i].innerHTML == 1024) squares[i].style.backgroundColor = 'skyblue'
+            else if (squares[i].innerHTML == 2048) squares[i].style.backgroundColor = 'gold'
+        }
+    }
+
+    function clear() {
+        clearInterval(myTimer)
+    }
+
+    var myTimer = setInterval(addColors, 50)
+})
+    </script>
+</body>
+</html>
